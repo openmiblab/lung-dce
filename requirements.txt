@@ -5,4 +5,4 @@ dbdicom==0.3.11
 vreg==0.0.10
 miblab[dlseg]==0.0.21
 mdreg[ants]==0.5.2
--e ./dcmri
+dcmri==0.6.19
