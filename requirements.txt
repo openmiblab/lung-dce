@@ -1,0 +1,8 @@
+numpy==2.2.6
+napari[all]==0.6.4
+matplotlib==3.10.6
+dbdicom==0.3.11
+vreg==0.0.10
+miblab[dlseg]==0.0.21
+mdreg[ants]==0.5.2
+-e ./dcmri
