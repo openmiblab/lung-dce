@@ -10,13 +10,12 @@ import mdreg
 import vreg
 
 
-PATH = "C:\\Users\\md1spsx\\Documents\\Data\\SheffieldLungs"
+datapath = "C:\\Users\\md1spsx\\Documents\\Data\\case_studies\\lung_dce"
+build_path = os.path.join(os.getcwd(), 'build')
 
-
-datapath = os.path.join(PATH, 'TestData')
-resultspath = os.path.join(PATH, 'TestDataAnalysis')
-imagepath = os.path.join(PATH, 'TestDataImages')
-checkpointspath = os.path.join(PATH, 'TestDataCheckpoints')
+resultspath = os.path.join(build_path, 'TestDataAnalysis')
+imagepath = os.path.join(build_path, 'TestDataImages')
+checkpointspath = os.path.join(build_path, 'TestDataCheckpoints')
 os.makedirs(imagepath, exist_ok=True)
 os.makedirs(checkpointspath, exist_ok=True)
 
