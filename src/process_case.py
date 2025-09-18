@@ -632,17 +632,12 @@ def view_maps():
     # mask_vol = db.volume(MASKS + [mask])
     # draw_mask(vol.values, mask_vol.values, name=mask, contrast_limits=[0, 5000])
 
-    map = 'S0_dce'
-    vol = db.volume(MAPS + [map])
+    map = '3D-DCE'
+    vol = db.volume(DATA + [map], 'AcquisitionTime')
     viewer = napari.Viewer()
-    viewer.add_image(vol.values.T, name=map, contrast_limits=[0, 5000])
+    viewer.add_image(vol.values.T, name=map, contrast_limits=[0, 1000])
     napari.run()
 
-    map = 'S0_vfa_on_dce'
-    vol = db.volume(MAPS + [map])
-    viewer = napari.Viewer()
-    viewer.add_image(vol.values.T, name=map, contrast_limits=[0, 5000])
-    napari.run()
 
 
 
@@ -658,7 +653,7 @@ if __name__=='__main__':
     # align_vfa_with_dce()
     # roi_analysis_model_based()
     # roi_analysis_model_free()
-    pixel_analysis_model_free()
+    # pixel_analysis_model_free()
     # pixel_analysis_model_based()
-    # view_maps()
+    view_maps()
     
