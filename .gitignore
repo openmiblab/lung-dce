@@ -5,6 +5,7 @@
 .venv/*
 docs/*
 modeldev/sourcedata/*
+build/*
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
