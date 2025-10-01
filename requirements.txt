@@ -6,3 +6,4 @@ vreg
 miblab[dlseg]
 mdreg[ants]
 dcmri
+pydmr

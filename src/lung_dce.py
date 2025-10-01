@@ -8,10 +8,14 @@ import dbdicom as db
 import miblab
 import mdreg
 import vreg
+import pydmr
+from totalsegmentator.map_to_binary import class_map
+
+from utils.stats import mask_stats
 
 
 datapath = "C:\\Users\\md1spsx\\Documents\\Data\\case_studies\\lung_dce"
-build_path = os.path.join(os.getcwd(), 'build')
+build_path = os.path.join(os.getcwd(), 'build', 'lung_dce')
 
 resultspath = os.path.join(build_path, 'TestDataAnalysis')
 imagepath = os.path.join(build_path, 'TestDataImages')
@@ -23,59 +27,7 @@ SUBJ = 'SheffieldSubject'
 DATA = [resultspath, SUBJ, 'Data']
 MAPS = [resultspath, SUBJ, 'Maps']
 MASKS = [resultspath, SUBJ, 'Masks']
-
-TOTAL_MR = {
-    1: "spleen",
-    2: "kidney_right",
-    3: "kidney_left",
-    4: "gallbladder",
-    5: "liver",
-    6: "stomach",
-    7: "pancreas",
-    8: "adrenal_gland_right",
-    9: "adrenal_gland_left",
-    10: "lung_left",
-    11: "lung_right",
-    12: "esophagus",
-    13: "small_bowel",
-    14: "duodenum",
-    15: "colon",
-    16: "urinary_bladder",
-    17: "prostate",
-    18: "sacrum",
-    19: "vertebrae",
-    20: "intervertebral_discs",
-    21: "spinal_cord",
-    22: "heart",
-    23: "aorta",
-    24: "inferior_vena_cava",
-    25: "portal_vein_and_splenic_vein",
-    26: "iliac_artery_left",
-    27: "iliac_artery_right",
-    28: "iliac_vena_left",
-    29: "iliac_vena_right",
-    30: "humerus_left",
-    31: "humerus_right",
-    32: "scapula_left",
-    33: "scapula_right",
-    34: "clavicula_left",
-    35: "clavicula_right",
-    36: "femur_left",
-    37: "femur_right",
-    38: "hip_left",
-    39: "hip_right",
-    40: "gluteus_maximus_left",
-    41: "gluteus_maximus_right",
-    42: "gluteus_medius_left",
-    43: "gluteus_medius_right",
-    44: "gluteus_minimus_left",
-    45: "gluteus_minimus_right",
-    46: "autochthon_left",
-    47: "autochthon_right",
-    48: "iliopsoas_left",
-    49: "iliopsoas_right",
-    50: "brain",
-}
+TOTAL_MR = class_map['total_mr']
 
 
 def draw_mask(array: np.ndarray, mask=None, name='ROI', contrast_limits=None) -> np.ndarray:
@@ -561,7 +513,7 @@ def pixel_analysis_model_based():
     aif_mask = db.volume(MASKS + ['pulmonary_artery']).values > 0
     R10_map = db.volume(MAPS + ['R1_vfa_on_dce']).values
     S0_map = db.volume(MAPS + ['S0_vfa_on_dce']).values
-    lung_right_mask = db.volume(MASKS + ['lung_right']).values 
+    lung_right_mask = db.volume(MASKS + ['lung_right']).values
     lung_left_mask = db.volume(MASKS + ['lung_left']).values
 
     # Get signals, sequence parameters and masks
@@ -638,6 +590,33 @@ def view_maps():
     napari.run()
 
 
+def pixel_averages_model_based():
+
+    fb_image = db.volume(MAPS + ['Fb_model']).values
+    vb_image = db.volume(MAPS + ['vb_model']).values
+    lung_right_mask = db.volume(MASKS + ['lung_right']).values
+    lung_left_mask = db.volume(MASKS + ['lung_left']).values
+
+    fb_lung_right = mask_stats(fb_image, lung_right_mask)
+    fb_lung_left = mask_stats(fb_image, lung_left_mask)
+    vb_lung_right = mask_stats(vb_image, lung_right_mask)
+    vb_lung_left = mask_stats(vb_image, lung_left_mask)
+
+    data = {}
+    data = data | {f"right_lung-fb-{k}":[f"Right lung blood flow {k}", 'mL/sec/cm3', 'float'] for k in fb_lung_right.keys()}
+    data = data | {f"right_lung-vb-{k}":[f"Right lung blood volume {k}", 'mL/cm3', 'float'] for k in vb_lung_right.keys()}
+    data = data | {f"left_lung-fb-{k}":[f"Left lung blood flow {k}", 'mL/sec/cm3', 'float'] for k in fb_lung_left.keys()}
+    data = data | {f"left_lung-vb-{k}":[f"Left lung blood volume {k}", 'mL/cm3', 'float'] for k in vb_lung_left.keys()}
+
+    pars = {}
+    pars = pars | {(SUBJ, 'DCE-MRI', f"right_lung-fb-{k}"):v for k, v in fb_lung_right.items()}
+    pars = pars | {(SUBJ, 'DCE-MRI', f"right_lung-vb-{k}"):v for k, v in vb_lung_right.items()}
+    pars = pars | {(SUBJ, 'DCE-MRI', f"left_lung-fb-{k}"):v for k, v in fb_lung_left.items()}
+    pars = pars | {(SUBJ, 'DCE-MRI', f"left_lung-vb-{k}"):v for k, v in vb_lung_left.items()}
+
+    dmr_file = os.path.join(build_path, 'roi_vals')
+    dmr = {'data':data, 'pars':pars}
+    pydmr.write(dmr_file, dmr)
 
 
 if __name__=='__main__':
@@ -654,5 +633,6 @@ if __name__=='__main__':
     # roi_analysis_model_free()
     # pixel_analysis_model_free()
     # pixel_analysis_model_based()
-    view_maps()
+    # view_maps()
+    pixel_averages_model_based()
     
