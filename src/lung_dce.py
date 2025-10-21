@@ -1,3 +1,34 @@
+"""
+Lung DCE-MRI case study processing pipeline.
+
+What does it do?
+
+This module processes a lung DCE-MRI dataset through the following steps:
+1. Harmonizes DICOM data structure by merging VFA and DCE series.
+2. Computes descriptive DCE maps (e.g., baseline, max enhancement).
+3. Automatically segments lungs using TotalSegmentator.
+4. Allows manual editing of lung segmentations via napari.  
+5. Draws arterial input function (AIF) region on maximum enhancement image.
+6. Performs motion correction on VFA and DCE series using mdreg.
+7. Fits VFA data to compute R1 and S0 maps.
+8. Aligns VFA-derived maps with DCE data space.
+9. Conducts ROI-based analysis using both model-free and model-based approaches.
+10. Performs pixel-wise pharmacokinetic modeling using model-free and model-based methods.
+
+How to use?
+
+1. Define a virtual envronment and install the requirements.
+2. Set the DATAPATH variable to point to the folder containing the DICOM data.
+3. Run the script. It will create a build/lung_dce folder in the current working directory.
+4. All intermediate results and final outputs will be saved in the build/lung_dce folder
+
+All steps will be executed sequentially when running the script
+Steps 1-3 are automated, while steps 4-5 require user interaction. 
+The script will pause and open a napari viewer for manual editing 
+of segmentations and drawing of AIF. After editing, close the napari 
+window to resume execution. All subsequent steps are automated again.
+"""
+
 import os
 
 import numpy as np
@@ -14,12 +45,19 @@ from totalsegmentator.map_to_binary import class_map
 from utils.stats import mask_stats
 
 
-datapath = "C:\\Users\\md1spsx\\Documents\\Data\\case_studies\\lung_dce"
-build_path = os.path.join(os.getcwd(), 'build', 'lung_dce')
+# --- USER SETTINGS ---
+#
+# Path to the folder containing the DICOM data for the lung DCE case study
+DATAPATH = "C:\\Users\\md1spsx\\Documents\\Data\\case_studies\\lung_dce"
+# 
+# --- END USER SETTINGS ---
 
-resultspath = os.path.join(build_path, 'TestDataAnalysis')
-imagepath = os.path.join(build_path, 'TestDataImages')
-checkpointspath = os.path.join(build_path, 'TestDataCheckpoints')
+
+
+build_path = os.path.join(os.getcwd(), 'build', 'lung_dce')
+resultspath = os.path.join(build_path, 'dicom')
+imagepath = os.path.join(build_path, 'images')
+checkpointspath = os.path.join(build_path, 'checkpoints')
 os.makedirs(imagepath, exist_ok=True)
 os.makedirs(checkpointspath, exist_ok=True)
 
@@ -32,7 +70,7 @@ TOTAL_MR = class_map['total_mr']
 
 def draw_mask(array: np.ndarray, mask=None, name='ROI', contrast_limits=None) -> np.ndarray:
     """
-    Open a napari viewer to manually define a binary mask on a 3D array.
+    Helper function: open a napari viewer to manually define a binary mask on a 3D array.
     
     Parameters
     ----------
@@ -93,13 +131,13 @@ def harmonize_data():
     # Merge VFA into 1 series to simplify analysis
     # Write the correct flip angle in each series
     for fa in [2,4,10,30]:
-        fa_series = db.series(datapath, contains=f'flip {fa}')[0]
+        fa_series = db.series(DATAPATH, contains=f'flip {fa}')[0]
         fa_series_copy = db.copy(fa_series)
         db.edit(fa_series_copy, {'FlipAngle':fa})
         db.move(fa_series_copy, vfa_series) # bug not removing empty folders
 
     # Merge DCE into one single series
-    dce = db.series(datapath, contains='WITH CONTRAST')
+    dce = db.series(DATAPATH, contains='WITH CONTRAST')
     [db.copy(phase, dce_series) for phase in dce]
     # Store timing info in acquisition time in seconds (miblab default)
     acq_time = db.values(dce_series, 'TriggerTime', dims=['SliceLocation', 'TriggerTime'])
@@ -175,13 +213,14 @@ def draw_arterial_inputs():
     ref_series = MAPS + ['SEmax']
     ref_vol = db.volume(ref_series) 
 
-    # Draw Right heart
-    roi = 'input'
-    mask_array = draw_mask(ref_vol.values, name=roi)  
-    mask_vol = (mask_array, ref_vol.affine)
-    mask_series = MASKS + [roi]
-    db.delete(mask_series, not_exists_ok=True)
-    db.write_volume(mask_vol, mask_series, ref=ref_series)
+    # # Draw right heart for mdreg
+    # # Not used at this stage
+    # roi = 'input'
+    # mask_array = draw_mask(ref_vol.values, name=roi)  
+    # mask_vol = (mask_array, ref_vol.affine)
+    # mask_series = MASKS + [roi]
+    # db.delete(mask_series, not_exists_ok=True)
+    # db.write_volume(mask_vol, mask_series, ref=ref_series)
 
     # Draw AIF
     roi = 'pulmonary_artery'
@@ -633,6 +672,6 @@ if __name__=='__main__':
     roi_analysis_model_free()
     pixel_analysis_model_free()
     pixel_analysis_model_based()
-    view_maps()
+    #view_maps()
     pixel_averages_model_based()
     
